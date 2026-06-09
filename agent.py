@@ -50,7 +50,9 @@ def get_credentials():
             return None
 
     if not os.path.exists(cred_path):
-        print(f"[WARNING] Service account key file not found at: {cred_path}. Using default ADC.")
+        print(f"[WARNING] Service account key file not found at: {cred_path}. Clearing environment variable and using default ADC.")
+        if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
+            del os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
         return None
 
     print(f"[INFO] Loading service account credentials from: {cred_path}")

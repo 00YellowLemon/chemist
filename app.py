@@ -22,6 +22,13 @@ load_dotenv()
 ricit_key = os.path.join("..", "ricit", "restaurant-c1836-firebase-adminsdk-fbsvc-3d3c323a70.json")
 if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") and os.path.exists(ricit_key):
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = ricit_key
+
+# Clear invalid GOOGLE_APPLICATION_CREDENTIALS to prevent google-auth libraries from crashing
+creds_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+if creds_path and not creds_path.strip().startswith("{") and not os.path.exists(creds_path):
+    print(f"[WARNING] Service account key file not found at: {creds_path}. Clearing GOOGLE_APPLICATION_CREDENTIALS to default to Application Default Credentials.")
+    del os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
+
 if not os.environ.get("GOOGLE_CLOUD_PROJECT"):
     os.environ["GOOGLE_CLOUD_PROJECT"] = "restaurant-c1836"
 
