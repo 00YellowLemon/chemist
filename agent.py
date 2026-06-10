@@ -14,45 +14,15 @@ from langchain.agents.middleware import HumanInTheLoopMiddleware
 # Load environment variables from .env
 load_dotenv()
 
+# Set up GCP credentials for local development or Cloud Run
+from credentials_helper import setup_google_credentials
+setup_google_credentials()
+
 def get_credentials():
     """Load service account credentials if configured, otherwise returns None to use Application Default Credentials (ADC)."""
-    sa_json = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
-    if sa_json:
-        print("[INFO] Loading service account credentials from GOOGLE_SERVICE_ACCOUNT_JSON environment variable.")
-        try:
-            from google.oauth2 import service_account
-            info = json.loads(sa_json)
-            return service_account.Credentials.from_service_account_info(
-                info,
-                scopes=["https://www.googleapis.com/auth/cloud-platform"]
-            )
-        except Exception as e:
-            print(f"[ERROR] Failed to load credentials from GOOGLE_SERVICE_ACCOUNT_JSON: {e}")
-            return None
-
     cred_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
     if not cred_path:
         print("[INFO] GOOGLE_APPLICATION_CREDENTIALS not set in environment. Using default ADC.")
-        return None
-
-    # Check if GOOGLE_APPLICATION_CREDENTIALS contains the actual JSON string
-    if cred_path.strip().startswith("{"):
-        print("[INFO] GOOGLE_APPLICATION_CREDENTIALS contains inline JSON. Loading directly.")
-        try:
-            from google.oauth2 import service_account
-            info = json.loads(cred_path)
-            return service_account.Credentials.from_service_account_info(
-                info,
-                scopes=["https://www.googleapis.com/auth/cloud-platform"]
-            )
-        except Exception as e:
-            print(f"[ERROR] Failed to parse GOOGLE_APPLICATION_CREDENTIALS as inline JSON: {e}")
-            return None
-
-    if not os.path.exists(cred_path):
-        print(f"[WARNING] Service account key file not found at: {cred_path}. Clearing environment variable and using default ADC.")
-        if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
-            del os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
         return None
 
     print(f"[INFO] Loading service account credentials from: {cred_path}")
@@ -228,10 +198,9 @@ def create_langchain_agent(checkpointer=None):
         "Ask the customer if they would like to proceed with the available items.\n"
         "4. Total Calculation: Once the user confirms they want to proceed, calculate the total using calculate_total. "
         "Provide a clear subtotal, tax, fee, and grand total. Do NOT calculate the math yourself; always use calculate_total.\n"
-        "5. Payment Processing: Present the bill. Prompt the user for payment by providing accepted methods (Credit Card, Mobile Money, Cash) and "
-        "the payment link: 'Your total comes to [Total Amount]. Would you like to pay via Credit Card, Mobile Money, or Cash at the counter? Please click the payment link below to proceed.' "
-        "Then call process_payment. This tool will trigger a payment authorization pause.\n"
-        "6. Final Confirmation: Once the transaction is confirmed, generate a digital receipt showing the details and provide pickup/delivery instructions."
+        "5. Order Summary & Cashier Handoff: Once the order is confirmed as correct by the user, provide the final order information. "
+        "This must clearly list the complete order details (medication names, dosages, and quantities) alongside the final payment details (grand total). "
+        "Finally, politely instruct the user to proceed to the cashier counter to make their payment, receive their official receipt, and finalize their confirmation."
     )
     
     return create_agent(

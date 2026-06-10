@@ -18,16 +18,9 @@ if sys.platform == "win32":
 
 load_dotenv()
 
-# Set credentials to use the local service account file if not configured in environment
-ricit_key = os.path.join("..", "ricit", "restaurant-c1836-firebase-adminsdk-fbsvc-3d3c323a70.json")
-if not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") and os.path.exists(ricit_key):
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = ricit_key
-
-# Clear invalid GOOGLE_APPLICATION_CREDENTIALS to prevent google-auth libraries from crashing
-creds_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-if creds_path and not creds_path.strip().startswith("{") and not os.path.exists(creds_path):
-    print(f"[WARNING] Service account key file not found at: {creds_path}. Clearing GOOGLE_APPLICATION_CREDENTIALS to default to Application Default Credentials.")
-    del os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
+# Set up GCP credentials for local development or Cloud Run
+from credentials_helper import setup_google_credentials
+setup_google_credentials()
 
 if not os.environ.get("GOOGLE_CLOUD_PROJECT"):
     os.environ["GOOGLE_CLOUD_PROJECT"] = "restaurant-c1836"
@@ -77,13 +70,22 @@ app = FastAPI(
 )
 
 # Configure CORS Middleware
+origins = [
+    "https://chemist-ai-ruddy.vercel.app",
+    "https://chemist-ai-ruddy.vercel.app/",
+    "http://localhost",
+    "http://127.0.0.1",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
+    allow_origin_regex=r"https?://localhost(:\d+)?|https?://127\.0\.0\.1(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 def serialize_message(msg) -> Dict[str, Any]:
     """Serializes a LangChain message into a standard API role/content response format."""
